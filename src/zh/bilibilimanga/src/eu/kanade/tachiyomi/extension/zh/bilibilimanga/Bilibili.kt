@@ -50,10 +50,11 @@ abstract class Bilibili(
     override val supportsLatest = true
 
     override val client: OkHttpClient = network.cloudflareClient.newBuilder()
-        .addInterceptor(::decryptImageIntercept)
         .addInterceptor(::expiredImageTokenIntercept)
+        .addInterceptor(::decryptImageIntercept)
         .rateLimitHost(baseUrl.toHttpUrl(), 1)
         .rateLimitHost(CDN_URL.toHttpUrl(), 2)
+        .rateLimitHost(MODIFIED_CDN_URL.toHttpUrl(), 2)
         .rateLimitHost(COVER_CDN_URL.toHttpUrl(), 2)
         .build()
 
@@ -309,9 +310,9 @@ abstract class Bilibili(
         val imageTokenRequest = imageTokenRequest(imageUrls)
         val imageTokenResponse = client.newCall(imageTokenRequest).execute()
         val imageTokenResult = imageTokenResponse.parseAs<List<BilibiliPageDto>>()
-
-        return imageTokenResult.data!!
-            .mapIndexed { i, page -> Page(i, "", page.imageUrl) }
+        return imageTokenResult.data!!.zip(imageUrls).mapIndexed { i, pair ->
+            Page(i, pair.second, pair.first.imageUrl)
+        }
     }
 
     protected open fun imageTokenRequest(urls: List<String>): Request {
@@ -383,13 +384,14 @@ abstract class Bilibili(
     }
 
     override fun imageRequest(page: Page): Request {
-        return super.imageRequest(page).newBuilder().tag(TAG_IMAGE_REQUEST).build()
+        return super.imageRequest(page).newBuilder().tag(TAG_IMAGE_REQUEST)
+            .tag(TagImagePath::class.java, TagImagePath(page.url)).build()
     }
 
     private fun decryptImageIntercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val response = chain.proceed(request)
-        if (response.code == 200 && request.tag() == TAG_IMAGE_REQUEST) {
+        if (response.isSuccessful && request.tag() == TAG_IMAGE_REQUEST) {
             if (response.body.contentType()?.type == "image") {
                 return response
             }
@@ -419,13 +421,16 @@ abstract class Bilibili(
     }
 
     private fun expiredImageTokenIntercept(chain: Interceptor.Chain): Response {
-        val response = chain.proceed(chain.request())
-
+        val request = chain.request()
+        val response = chain.proceed(request)
         // Get a new image token if the current one expired.
-        if (response.code == 403 && chain.request().tag() == TAG_IMAGE_REQUEST) {
+        if (response.code == 400 && request.tag() == TAG_IMAGE_REQUEST) {
+            val imagePath = request.tag(TagImagePath::class)
+            if (imagePath?.path.isNullOrEmpty()) {
+                return response
+            }
             response.close()
-            val imagePath = chain.request().url.encodedPath
-            val imageTokenRequest = imageTokenRequest(listOf(imagePath))
+            val imageTokenRequest = imageTokenRequest(listOf(imagePath!!.path))
             val imageTokenResponse = chain.proceed(imageTokenRequest)
             val imageTokenResult = imageTokenResponse.parseAs<List<BilibiliPageDto>>()
             imageTokenResponse.close()
@@ -433,7 +438,7 @@ abstract class Bilibili(
             val newPage = imageTokenResult.data!!.first()
             val newPageUrl = newPage.imageUrl
 
-            val newRequest = imageRequest(Page(0, "", newPageUrl))
+            val newRequest = imageRequest(Page(0, imagePath.path, newPageUrl))
 
             return chain.proceed(newRequest)
         }
@@ -478,8 +483,11 @@ abstract class Bilibili(
             .getOrNull() ?: 0L
     }
 
+    private class TagImagePath(val path: String)
+
     companion object {
         const val CDN_URL = "https://manga.hdslb.com"
+        const val MODIFIED_CDN_URL = "https://mangaup.hdslb.com"
         const val COVER_CDN_URL = "https://i0.hdslb.com"
 
         const val API_COMIC_V1_COMIC_ENDPOINT = "twirp/comic.v1.Comic"
