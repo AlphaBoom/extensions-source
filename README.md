@@ -14,6 +14,10 @@ https://github.com/keiyoushi/extensions-source/issues/new/choose
 
 ## Guide
 
+```
+https://raw.githubusercontent.com/AlphaBoom/extensions-source/repo/index.min.json
+```
+
 [Getting started](https://keiyoushi.github.io/docs/guides/getting-started#adding-the-extension-repo)
 
 # Others
