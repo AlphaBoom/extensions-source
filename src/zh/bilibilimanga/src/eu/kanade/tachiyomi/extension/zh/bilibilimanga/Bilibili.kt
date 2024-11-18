@@ -406,16 +406,16 @@ abstract class Bilibili(
             val ivSpec = IvParameterSpec(iv)
             cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), ivSpec)
             val encryptedSize = 20 * 1024 + 16
-            val decryptedSegment =
-                cipher.doFinal(data.copyOfRange(0, encryptedSize.coerceAtMost(data.size)))
+            val decryptedSegment = cipher.doFinal(data, 0, encryptedSize.coerceAtMost(data.size))
             val decryptedData = if (encryptedSize < data.size) {
                 // append remaining data
                 decryptedSegment + data.copyOfRange(encryptedSize, data.size)
             } else {
                 decryptedSegment
             }
+            val imageExtension = request.url.encodedPath.substringAfterLast(".", "jpg")
             return response.newBuilder()
-                .body(decryptedData.toResponseBody("image/jpg".toMediaType())).build()
+                .body(decryptedData.toResponseBody("image/$imageExtension".toMediaType())).build()
         }
         return response
     }
