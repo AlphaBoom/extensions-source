@@ -1,5 +1,25 @@
 [
   {
+    "name": "Tachiyomi: Pixiv Comic",
+    "pkg": "eu.kanade.tachiyomi.extension.ja.pixivcomic",
+    "apk": "tachiyomi-ja.pixivcomic-v1.4.3.apk",
+    "lang": "ja",
+    "code": 3,
+    "version": "1.4.3",
+    "nsfw": 0,
+    "hasReadme": 0,
+    "hasChangelog": 0,
+    "sources": [
+      {
+        "name": "Pixivコミック",
+        "lang": "ja",
+        "id": "2937751339618832603",
+        "baseUrl": "https://comic.pixiv.net",
+        "versionId": 1
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: BILIBILI MANGA",
     "pkg": "eu.kanade.tachiyomi.extension.zh.bilibilimanga",
     "apk": "tachiyomi-zh.bilibilimanga-v1.4.12.apk",
