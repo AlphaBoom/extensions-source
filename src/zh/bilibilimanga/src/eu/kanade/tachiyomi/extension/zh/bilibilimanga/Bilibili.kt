@@ -33,13 +33,9 @@ import org.jsoup.Jsoup
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import java.security.KeyPairGenerator
 import java.text.SimpleDateFormat
 import java.util.Locale
-import javax.crypto.Cipher
-import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.SecretKeySpec
 
 abstract class Bilibili(
     override val name: String,
@@ -316,8 +312,13 @@ abstract class Bilibili(
     }
 
     protected open fun imageTokenRequest(urls: List<String>): Request {
+        val imgKey = createImgKey()
+        urls.forEach {
+            keyCache[it] = imgKey
+        }
         val jsonPayload = buildJsonObject {
             put("urls", json.encodeToString(urls))
+            put("m1", imgKey.first)
         }
         val requestBody = jsonPayload.toString().toRequestBody(JSON_MEDIA_TYPE)
 
@@ -395,27 +396,12 @@ abstract class Bilibili(
             if (response.body.contentType()?.type == "image") {
                 return response
             }
-            val cpx = request.url.queryParameter("cpx")
-            val iv = Base64.decode(cpx, Base64.DEFAULT).copyOfRange(60, 76)
-            val allBytes = response.body.bytes()
-            val size =
-                ByteBuffer.wrap(allBytes.copyOfRange(1, 5)).order(ByteOrder.BIG_ENDIAN).getInt()
-            val data = allBytes.copyOfRange(5, 5 + size)
-            val key = allBytes.copyOfRange(5 + size, allBytes.size)
-            val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-            val ivSpec = IvParameterSpec(iv)
-            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), ivSpec)
-            val encryptedSize = 20 * 1024 + 16
-            val decryptedSegment =
-                cipher.doFinal(data.copyOfRange(0, encryptedSize.coerceAtMost(data.size)))
-            val decryptedData = if (encryptedSize < data.size) {
-                // append remaining data
-                decryptedSegment + data.copyOfRange(encryptedSize, data.size)
-            } else {
-                decryptedSegment
+            val decryptedData = response.body.bytes().let {
+                it.copyOfRange(5, it.size)
             }
+            val imageExtension = request.url.encodedPath.substringAfterLast(".", "jpg")
             return response.newBuilder()
-                .body(decryptedData.toResponseBody("image/jpg".toMediaType())).build()
+                .body(decryptedData.toResponseBody("image/$imageExtension".toMediaType())).build()
         }
         return response
     }
@@ -462,6 +448,17 @@ abstract class Bilibili(
     private val SharedPreferences.chapterImageFormat
         get() = getString("${IMAGE_FORMAT_PREF_KEY}_$lang", IMAGE_FORMAT_PREF_DEFAULT_VALUE)!!
 
+    private val keyCache = hashMapOf<String, Pair<String, String>>()
+
+    private fun createImgKey(): Pair<String, String> {
+        val keyPair = KeyPairGenerator.getInstance("EC")
+            .also { it.initialize(256) }
+            .generateKeyPair()
+        val publicKey = keyPair.public.encoded.b2a()
+        val privateKey = keyPair.private.encoded.b2a()
+        return publicKey to privateKey
+    }
+
     private inline fun <reified R> List<*>.firstInstanceOrNull(): R? = firstOrNull { it is R } as? R
 
     protected open fun HttpUrl.Builder.addCommonParameters(): HttpUrl.Builder = apply {
@@ -481,6 +478,14 @@ abstract class Bilibili(
     private fun String.toDate(): Long {
         return runCatching { DATE_FORMATTER.parse(this)?.time }
             .getOrNull() ?: 0L
+    }
+
+    private fun ByteArray.b2a(): String {
+        return Base64.encodeToString(this, Base64.DEFAULT)
+    }
+
+    private fun String.a2b(): ByteArray {
+        return Base64.decode(this, Base64.DEFAULT)
     }
 
     private class TagImagePath(val path: String)
