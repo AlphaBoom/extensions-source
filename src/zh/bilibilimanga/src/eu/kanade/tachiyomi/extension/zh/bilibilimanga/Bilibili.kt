@@ -396,10 +396,10 @@ abstract class Bilibili(
             if (response.body.contentType()?.type == "image") {
                 return response
             }
-            val decryptedData = response.body.byteStream().use {
-                it.skip(5)
-                it.readBytes()
-            }
+            val cpx = request.url.queryParameter("cpx")
+            val iv = cpx?.a2b()?.copyOfRange(60, 76)
+            val privateKey = keyCache[request.tag(TagImagePath::class)?.path]?.second
+            val decryptedData = response.body.byteStream().decodeImage(iv = iv, privateKey = privateKey)
             val imageExtension = request.url.encodedPath.substringAfterLast(".", "jpg")
             return response.newBuilder()
                 .body(decryptedData.toResponseBody("image/$imageExtension".toMediaType())).build()
