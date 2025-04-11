@@ -34,6 +34,23 @@
     ]
   },
   {
+    "name": "Tachiyomi: CartoonMad",
+    "pkg": "eu.kanade.tachiyomi.extension.zh.cartoonmad",
+    "apk": "tachiyomi-zh.cartoonmad-v1.4.1.apk",
+    "lang": "zh",
+    "code": 1,
+    "version": "1.4.1",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "動漫狂",
+        "lang": "zh",
+        "id": "6868792237587519643",
+        "baseUrl": "https://www.cartoonmad.com"
+      }
+    ]
+  },
+  {
     "name": "Tachiyomi: MyComic",
     "pkg": "eu.kanade.tachiyomi.extension.zh.mycomic",
     "apk": "tachiyomi-zh.mycomic-v1.4.1.apk",
