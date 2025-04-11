@@ -1,1 +1,53 @@
-[]
+[
+  {
+    "name": "Tachiyomi: Pixiv Comic",
+    "pkg": "eu.kanade.tachiyomi.extension.ja.pixivcomic",
+    "apk": "tachiyomi-ja.pixivcomic-v1.4.3.apk",
+    "lang": "ja",
+    "code": 3,
+    "version": "1.4.3",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "Pixivコミック",
+        "lang": "ja",
+        "id": "2937751339618832603",
+        "baseUrl": "https://comic.pixiv.net"
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: BILIBILI MANGA",
+    "pkg": "eu.kanade.tachiyomi.extension.zh.bilibilimanga",
+    "apk": "tachiyomi-zh.bilibilimanga-v1.4.13.apk",
+    "lang": "zh-Hans",
+    "code": 13,
+    "version": "1.4.13",
+    "nsfw": 0,
+    "sources": [
+      {
+        "name": "哔哩哔哩漫画",
+        "lang": "zh-Hans",
+        "id": "3561131545129718586",
+        "baseUrl": "https://manga.bilibili.com"
+      }
+    ]
+  },
+  {
+    "name": "Tachiyomi: MyComic",
+    "pkg": "eu.kanade.tachiyomi.extension.zh.mycomic",
+    "apk": "tachiyomi-zh.mycomic-v1.4.1.apk",
+    "lang": "zh",
+    "code": 1,
+    "version": "1.4.1",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "MyComic",
+        "lang": "zh",
+        "id": "9119537447562549661",
+        "baseUrl": "https://mycomic.com"
+      }
+    ]
+  }
+]
