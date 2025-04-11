@@ -1,12 +1,14 @@
 package eu.kanade.tachiyomi.extension.zh.cartoonmad
 
 import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.ParsedHttpSource
 import eu.kanade.tachiyomi.util.asJsoup
+import okhttp3.FormBody
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -34,7 +36,7 @@ class CartoonMad : ParsedHttpSource() {
         val request = chain.request()
         val path = request.url.encodedPath
         val response = chain.proceed(request)
-        if (response.code == 302) {
+        if (response.code == 302 && request.method == "GET") {
             val location = response.header("Location")
             if (location == "http://www.cartoonmad.com/m/" || location == "$baseUrl/m/") {
                 val newPath = when {
@@ -78,11 +80,14 @@ class CartoonMad : ParsedHttpSource() {
         val content = document.select(content_selector)
         return SManga.create().apply {
             content.select("> table:nth-child(1) > tbody").let {
-                author = it.select("> tr > td:contains(作者：)").text().substringAfter("作者：").trim()
-                genre = it.select("> tr > td:contains(分類：) td:has(img[src=/image/start.gif])").text()
-                    .substringAfter("分類：").trim()
+                author =
+                    it.select("> tr > td:contains(作者：)").text().substringAfter("作者：").trim()
+                genre =
+                    it.select("> tr > td:contains(分類：) td:has(img[src=/image/start.gif])").text()
+                        .substringAfter("分類：").trim()
                 thumbnail_url =
-                    it.select("span.cover + img, span.covers + img").attr("abs:src").ifEmpty { thumbnail_url }
+                    it.select("span.cover + img, span.covers + img").attr("abs:src")
+                        .ifEmpty { thumbnail_url }
             }
             description = content.select("> table:nth-child(2) legend + table").text()
         }
@@ -137,21 +142,22 @@ class CartoonMad : ParsedHttpSource() {
             ", div#container div.comic_prev"
     }
 
-    override fun searchMangaFromElement(element: Element): SManga {
-        TODO("Not yet implemented")
-    }
+    override fun searchMangaFromElement(element: Element) = popularMangaFromElement(element)
 
-    override fun searchMangaNextPageSelector(): String? {
-        TODO("Not yet implemented")
-    }
+    override fun searchMangaNextPageSelector() = popularMangaNextPageSelector()
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        TODO("Not yet implemented")
+        return POST(
+            "$baseUrl/m/?act=7",
+            body = FormBody.Builder()
+                .add("keyword", query)
+                .add("x", "0")
+                .add("y", "0")
+                .build(),
+        )
     }
 
-    override fun searchMangaSelector(): String {
-        TODO("Not yet implemented")
-    }
+    override fun searchMangaSelector() = popularMangaSelector()
 }
 
 private const val content_selector =
