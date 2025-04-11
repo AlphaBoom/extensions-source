@@ -20,9 +20,17 @@ class SortFilter(state: Int) : UriPartFilter(
         "最新上架" to "",
         "最近更新" to "-update",
         "最高人气" to "-views",
+        "日排行" to RANK_PREFIX,
+        "週排行" to "$RANK_PREFIX-week",
+        "月排行" to "$RANK_PREFIX-month",
+        "歷史排行" to "$RANK_PREFIX-views",
     ),
     state,
-)
+) {
+    companion object {
+        const val RANK_PREFIX = "rank|"
+    }
+}
 
 object RegionFilter : UriPartFilter(
     "filter[country]",
