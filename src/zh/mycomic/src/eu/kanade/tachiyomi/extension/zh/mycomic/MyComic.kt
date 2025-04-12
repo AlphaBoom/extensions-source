@@ -2,11 +2,13 @@ package eu.kanade.tachiyomi.extension.zh.mycomic
 
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.model.FilterList
+import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.ParsedHttpSource
 import eu.kanade.tachiyomi.util.asJsoup
+import keiyoushi.utils.firstInstance
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -36,7 +38,8 @@ class MyComic : ParsedHttpSource() {
     override fun chapterListParse(response: Response): List<SChapter> {
         val doc = response.asJsoup()
         val data = doc.select("div[data-flux-card] + div div[x-data]").attr("x-data")
-        val chapters = data.substringAfter("chapters:").substringBefore("\n").trim().removeSuffix(",")
+        val chapters =
+            data.substringAfter("chapters:").substringBefore("\n").trim().removeSuffix(",")
         return json.decodeFromString<JsonArray>(chapters).map {
             SChapter.create().apply {
                 name = it.jsonObject["title"]!!.jsonPrimitive.content
@@ -106,6 +109,24 @@ class MyComic : ParsedHttpSource() {
 
     override fun searchMangaSelector() = "div.grid > div.group"
 
+    override fun searchMangaParse(response: Response): MangasPage {
+        if (response.request.url.encodedPath == "/rank") {
+            val doc = response.asJsoup()
+            return MangasPage(
+                doc.select("table > tbody > tr > td:nth-child(2) a").map {
+                    SManga.create().apply {
+                        setUrlWithoutDomain(it.attr("href"))
+                        title = it.text()
+                        // ranking page not support thumbnail
+                    }
+                },
+                false,
+            )
+        } else {
+            return super.searchMangaParse(response)
+        }
+    }
+
     override fun searchMangaFromElement(element: Element): SManga {
         return SManga.create().apply {
             setUrlWithoutDomain(element.selectFirst("a")!!.absUrl("href"))
@@ -123,12 +144,27 @@ class MyComic : ParsedHttpSource() {
     override fun searchMangaNextPageSelector() = "nav[role=navigation] a[rel=next]"
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        val url = "$baseUrl/comics".toHttpUrl().newBuilder()
-        url.addQueryParameterIfNotEmpty("q", query)
+        val sortFilter = filters.firstInstance<SortFilter>()
+        val isRankFilter = sortFilter.selected.startsWith(SortFilter.RANK_PREFIX)
+        val url = if (isRankFilter) {
+            "$baseUrl/rank"
+        } else {
+            "$baseUrl/comics"
+        }.toHttpUrl().newBuilder()
+        if (!isRankFilter) {
+            url.addQueryParameterIfNotEmpty("q", query)
+        }
+        url.addQueryParameterIfNotEmpty(
+            sortFilter.key,
+            sortFilter.selected.removePrefix(SortFilter.RANK_PREFIX),
+        )
         filters.list.filterIsInstance<UriPartFilter>().forEach {
+            if (it is SortFilter) {
+                return@forEach
+            }
             url.addQueryParameterIfNotEmpty(it.key, it.selected)
         }
-        if (page > 1) {
+        if (!isRankFilter && page > 1) {
             url.addQueryParameter("page", page.toString())
         }
         return GET(url.build(), headers = headers)
