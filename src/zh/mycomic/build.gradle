@@ -1,7 +1,13 @@
 ext {
+<<<<<<<< HEAD:src/zh/mycomic/build.gradle
     extName = 'MyComic'
     extClass = '.MyComic'
     extVersionCode = 1
+========
+    extName = 'MissKon'
+    extClass = '.MissKon'
+    extVersionCode = 2
+>>>>>>>> upstream/main:src/all/misskon/build.gradle
     isNsfw = true
 }
 

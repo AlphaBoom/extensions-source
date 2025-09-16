@@ -2,4 +2,4 @@
 /gradlew.bat linguist-generated
 
 * text=auto eol=lf
-*.bat text eol=crlf
+; *.bat text eol=crlf
